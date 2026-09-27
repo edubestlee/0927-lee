@@ -1,0 +1,3577 @@
+<!DOCTYPE html>
+<!--
+  웹슬라이드 스타터 · 두온교육 「강의 사이트 제작 노하우」 참가자 키트
+  먼저 바꿀 것
+  1) 아래 스크립트의 LS = 'mykit_' → 내 강의 고유 접두사 (예: 'ai0927_')
+     접두사가 겹치면 다른 강의 사이트와 저장값이 섞임
+  2) <title>, description, 표지·마침 슬라이드의 [ ] 자리
+  3) 슬라이드 추가·삭제 시 aria-label 번호와 주석 번호 함께 재정렬 (AGENTS.md 참고)
+  외부 파일 없음 · 백엔드 없음 · 이 파일 하나로 동작
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>[강의 제목] 슬라이드</title>
+<meta name="description" content="[강의 제목] 수업 슬라이드 · [날짜] · 강사 [이름]">
+<meta name="theme-color" content="#111111">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --ink:#111111; --sub:#555555; --mute:#767676;
+  --line:#E3E3E3;
+  --slide-bg:#F4F4F3; --card:#FFFFFF;
+  --accent:#F6C744; --accent-sub:#3A3000;
+  --shadow:0 .45cqi 1.4cqi rgba(0,0,0,.09), 0 .1cqi .3cqi rgba(0,0,0,.07);
+  --shadow-lg:0 .8cqi 2.4cqi rgba(0,0,0,.13), 0 .18cqi .45cqi rgba(0,0,0,.08);
+  --alert:#D32F2F;
+  --nav-h:60px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:#0E0E0E;color:var(--ink);
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;
+  word-break:keep-all;overflow-wrap:anywhere;-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:inherit;text-wrap:balance;letter-spacing:-.01em}
+p,li{text-wrap:pretty}
+button{font-family:inherit}
+
+/* 16:9 무대 · 모든 크기를 무대 폭 기준 cqi로 → 창 크기와 무관하게 같은 비율 */
+#stage{position:fixed;left:50%;top:calc((100vh - var(--nav-h)) / 2);transform:translate(-50%,-50%);
+  width:min(100vw, calc((100vh - var(--nav-h)) * 16 / 9));aspect-ratio:16/9;
+  container-type:inline-size;background:var(--slide-bg);overflow:hidden}
+
+.slide{position:absolute;inset:0;display:none;flex-direction:column;padding:4.6cqi 6cqi;background:var(--slide-bg);color:var(--ink)}
+.slide.active{display:flex}
+.slide-content{flex:1;display:flex;flex-direction:column;justify-content:center;gap:1.8cqi;min-height:0}
+
+/* 타이포 (단위 cqi) */
+.kicker{display:flex;align-items:center;gap:1cqi;font-size:1.6cqi;font-weight:800;letter-spacing:.06em;color:var(--ink)}
+.kicker::before{content:'';flex:0 0 auto;width:2.4cqi;height:.36cqi;background:currentColor}
+h1{font-size:6cqi;font-weight:900;line-height:1.22}
+h2{font-size:3.9cqi;font-weight:800;line-height:1.28}
+.lede{font-size:2.2cqi;color:var(--sub);line-height:1.6}
+
+/* 표지·마침: 머스타드 옐로 / 휴식: 검정 반전 */
+.title-slide{background:var(--accent);color:#111111}
+.title-slide .slide-content{align-items:center;text-align:center}
+.title-slide .kicker{color:#111111}
+.title-slide h1::after{content:'';display:block;width:6cqi;height:.4cqi;background:#111111;margin:2.4cqi auto 0}
+.title-slide .lede{color:var(--accent-sub)}
+.slide.dark{background:#111111;color:#FFFFFF}
+.slide.dark .kicker{color:#FFFFFF}
+.slide.dark .lede{color:#BDBDBD}
+.meta-row{display:flex;justify-content:center;gap:1.2cqi;flex-wrap:wrap;font-size:1.7cqi}
+.meta-row span{border:.18cqi solid #111111;border-radius:99cqi;padding:.7cqi 2cqi;color:#111111;font-weight:600}
+
+/* 불릿: 한 줄씩 그림자 박스 */
+.bullets{display:flex;flex-direction:column;gap:1.2cqi}
+.bullets li{list-style:none;display:flex;gap:1.4cqi;align-items:flex-start;font-size:2.25cqi;line-height:1.55;
+  background:var(--card);box-shadow:var(--shadow);border-radius:1cqi;padding:1.25cqi 2cqi}
+.bullets li::before{content:'';flex:0 0 auto;width:.75cqi;height:.75cqi;background:var(--ink);margin-top:1.36cqi}
+.slide-content a{color:inherit;text-underline-offset:.3em;text-decoration-thickness:.15em}
+
+/* 카드 */
+.card-grid{display:grid;gap:1.8cqi}
+.c2{grid-template-columns:repeat(2,1fr)}
+.c3{grid-template-columns:repeat(3,1fr)}
+.c4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--card);border-radius:1.2cqi;box-shadow:var(--shadow-lg);padding:2.2cqi;
+  display:flex;flex-direction:column;gap:.8cqi;min-width:0}
+.card .n{font-size:3.4cqi;font-weight:900;line-height:1;color:var(--ink)}
+.card .t{font-size:2.3cqi;font-weight:800}
+.card .d{font-size:1.8cqi;color:var(--sub);line-height:1.5}
+/* 색으로만 구분 금지: 아쉬운 예 = 점선 + ✕, 좋은 예 = 굵은 검정 막대 + ✓ */
+.card.bad{background:#FAFAFA;box-shadow:none;border:.2cqi dashed #9E9E9E}
+.card.bad .t{color:var(--sub)}
+.card.bad .t::before{content:'✕  '}
+.card.good{border-left:.7cqi solid var(--ink)}
+.card.good .t::before{content:'✓  '}
+
+/* 표 */
+table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:1.85cqi;line-height:1.35;
+  background:var(--card);box-shadow:var(--shadow-lg);border-radius:1.2cqi;overflow:hidden}
+table.tbl th, table.tbl td{padding:.8cqi 1.6cqi;text-align:left;border-bottom:.12cqi solid var(--line)}
+table.tbl tbody tr:last-child td{border-bottom:none}
+table.tbl th{background:#111111;color:#FFFFFF;font-weight:800}
+table.tbl tr.today td{font-weight:800}
+table.tbl tr.today td:first-child{box-shadow:inset .55cqi 0 0 #111111}
+table.tbl td:first-child, table.tbl th:first-child{white-space:nowrap}
+table.tbl td:first-child{color:var(--sub)}
+
+/* 프롬프트 카드: 검정 박스 + 오른쪽 위 복사 버튼 */
+.prompt-card{position:relative;background:#111111;color:#F2F2F2;border-radius:1.2cqi;box-shadow:var(--shadow-lg);
+  padding:2cqi 2.4cqi;display:flex;flex-direction:column;gap:1cqi}
+.prompt-card .label{font-size:1.5cqi;font-weight:800;letter-spacing:.06em;color:#BDBDBD;padding-right:14cqi}
+.prompt-card blockquote{font-size:2cqi;line-height:1.6;color:#FFFFFF;border-left:.3cqi solid #666666;padding-left:1.6cqi;
+  font-style:normal;white-space:pre-wrap}
+.copy-btn{position:absolute;top:1.5cqi;right:1.6cqi;font-size:1.5cqi;font-weight:800;
+  padding:.7cqi 1.8cqi;border-radius:99cqi;border:none;background:#FFFFFF;color:#111111;cursor:pointer;min-height:44px;min-width:44px}
+.copy-btn:hover, .copy-btn.copied{background:#E2E2E2}
+.copy-btn:focus-visible{outline:.25cqi solid #FFFFFF;outline-offset:.25cqi}
+
+/* 타이머: 클릭 시작/일시정지 · 더블클릭 또는 R 키 리셋 */
+.timer-chip{display:inline-flex;align-items:center;gap:1cqi;align-self:flex-start;cursor:pointer;user-select:none;
+  background:var(--card);box-shadow:var(--shadow);border:.18cqi solid var(--ink);border-radius:99cqi;min-height:44px;
+  padding:.9cqi 2.2cqi;font-size:2cqi;font-weight:800;color:var(--ink)}
+.timer-chip .time{font-variant-numeric:tabular-nums;min-width:3.4em;text-align:center}
+.timer-chip.running{background:#111111;color:#FFFFFF}
+.timer-chip.warn .time{color:var(--alert)}
+.timer-chip.running.warn .time{color:#FF8A80}
+.timer-chip .state{font-size:1.4cqi;font-weight:700;opacity:.8}
+.timer-chip:focus-visible, .break-big:focus-visible{outline:.3cqi solid currentColor;outline-offset:.4cqi}
+.break-big{cursor:pointer;user-select:none;text-align:center;font-variant-numeric:tabular-nums;background:none;border:none;
+  font-size:16cqi;font-weight:900;line-height:1.05;color:#FFFFFF;min-height:44px;border-radius:1cqi}
+.break-big.warn{color:#FF8A80}
+
+/* 하단 네비 */
+#nav{position:fixed;left:0;right:0;bottom:0;height:var(--nav-h);background:#0E0E0E;border-top:1px solid #222;
+  display:flex;align-items:center;gap:8px;padding:0 14px;color:#EEEEEE;font-size:14px;z-index:200}
+#nav button, #nav a{background:#1F1F1F;color:#EEEEEE;border:1px solid #2E2E2E;border-radius:8px;
+  height:44px;min-width:44px;padding:0 14px;font-size:14px;font-weight:700;cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+#nav button:hover, #nav a:hover{background:#2C2C2C}
+#nav button:disabled{opacity:.35;cursor:default}
+#nav button:focus-visible, #nav a:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px}
+#nav .grow{flex:1}
+#counter{font-variant-numeric:tabular-nums;font-weight:800;min-width:5.5em;text-align:center}
+.hint{color:#9A9A9A;font-size:12.5px}
+#progress{position:fixed;left:0;bottom:var(--nav-h);height:3px;background:#FFFFFF;width:0;z-index:201;transition:width .2s}
+@media (max-width:760px){ #nav .hide-sm{display:none} }
+
+/* 전체보기: 실제 축소판 */
+.grid-overlay{position:fixed;inset:0;z-index:500;background:rgba(10,10,10,.97);display:none;overflow:auto;padding:22px 22px 40px}
+.grid-overlay.open{display:block}
+.grid-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.grid-head h2{color:#FFFFFF;font-size:20px;font-weight:800}
+.grid-head button{background:#1F1F1F;color:#EEEEEE;border:1px solid #2E2E2E;border-radius:8px;height:44px;padding:0 16px;
+  font-size:14px;font-weight:700;cursor:pointer}
+.grid-head button:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px}
+.grid-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.mini{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;cursor:pointer;
+  outline:3px solid transparent;outline-offset:2px;background:var(--slide-bg)}
+.mini:hover, .mini:focus-visible, .mini.current{outline-color:#FFFFFF}
+/* 960px 기준으로 그린 뒤 축소 · 240px에 직접 그리면 브라우저 최소 글꼴 크기에 걸려 넘침 */
+.mini-inner{position:absolute;left:0;top:0;width:960px;height:540px;container-type:inline-size;
+  transform-origin:0 0;pointer-events:none;background:var(--slide-bg)}
+.mini-inner .slide{display:flex}
+.mini-num{position:absolute;right:6px;top:6px;background:rgba(0,0,0,.78);color:#FFFFFF;font-size:12px;font-weight:700;
+  padding:2px 8px;border-radius:99px;z-index:2}
+
+@media (prefers-reduced-motion:reduce){ #progress{transition:none} }
+
+/* PDF: 16:9 페이지 1장 = 슬라이드 1장 */
+@page{size:13.333in 7.5in;margin:0}
+@media print{
+  html, body{overflow:visible!important;height:auto!important;background:#FFFFFF}
+  #nav, #progress, .grid-overlay{display:none!important}
+  #stage{position:static!important;transform:none!important;width:13.333in!important;aspect-ratio:auto!important;overflow:visible!important}
+  #stage > .slide{position:relative!important;display:flex!important;width:13.333in;height:7.5in;
+    break-after:page;page-break-after:always;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #stage > .slide:last-child{break-after:auto;page-break-after:auto}
+}
+</style>
+</head>
+<body>
+
+<main id="stage">
+
+<!-- ===== 1. 강의 표지 ===== -->
+<section class="slide title-slide active" aria-label="1. 강의 표지">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h1>구글 워크스페이스 입문</h1>
+    <p class="lede">과정명과 18시간 교육 목표</p>
+    <div class="meta-row"><span>50분</span><span>1차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 2. 강의 순서 ===== -->
+<section class="slide" aria-label="2. 강의 순서">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h2>강의 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>전체 차시와 학습 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 3. 디지털 생활 ===== -->
+<section class="slide" aria-label="3. 디지털 생활">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문 · 실습</div>
+    <h2>디지털 생활</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-3">실습 목표: 일상 속 구글 서비스 경험 확인
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-3" aria-label="디지털 생활 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 4. 워크스페이스 개념 ===== -->
+<section class="slide" aria-label="4. 워크스페이스 개념">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h2>워크스페이스 개념</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">인터넷에서 사용하는 업무 도구 모음</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 5. 주요 서비스 ===== -->
+<section class="slide" aria-label="5. 주요 서비스">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h2>주요 서비스</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">드라이브·문서·메일·캘린더의 역할</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6. 서비스 연결 ===== -->
+<section class="slide" aria-label="6. 서비스 연결">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h2>서비스 연결</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">하나의 계정으로 이어지는 작업 흐름</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 7. 저장 방식 ===== -->
+<section class="slide" aria-label="7. 저장 방식">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h2>저장 방식</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">내 컴퓨터 저장과 클라우드 저장의 차이</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 8. 접속 준비 ===== -->
+<section class="slide" aria-label="8. 접속 준비">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h2>접속 준비</h2>
+    <ul class="bullets"><li>핵심: 인터넷·브라우저·계정 확인</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 9. 첫 화면 실습 ===== -->
+<section class="slide" aria-label="9. 첫 화면 실습">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문 · 실습</div>
+    <h2>첫 화면 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-9">실습 목표: 구글 홈페이지와 앱 메뉴 찾기
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-9" aria-label="첫 화면 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 10. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="10. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">눈과 손목 스트레칭 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 11. 앱 메뉴 ===== -->
+<section class="slide" aria-label="11. 앱 메뉴">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h2>앱 메뉴</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">점 아홉 개 메뉴의 위치와 기능</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 12. 기본 용어 ===== -->
+<section class="slide" aria-label="12. 기본 용어">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h2>기본 용어</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>계정·로그인·클라우드·공유의 뜻</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 13. 안전 원칙 ===== -->
+<section class="slide" aria-label="13. 안전 원칙">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h2>안전 원칙</h2>
+    <ul class="bullets"><li>핵심: 비밀번호와 로그아웃 기본 원칙</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 14. 확인 실습 ===== -->
+<section class="slide" aria-label="14. 확인 실습">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문 · 실습</div>
+    <h2>확인 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-14">실습 목표: 서비스 이름과 용도 연결하기
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-14" aria-label="확인 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 15. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="15. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">1차시 · 구글 워크스페이스 입문</div>
+    <h1>차시 마침</h1>
+    <p class="lede">핵심 내용 요약과 다음 차시 안내</p>
+  </div>
+</section>
+
+<!-- ===== 16. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="16. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h1>구글 계정과 화면</h1>
+    <p class="lede">계정과 기본 환경 학습 목표</p>
+    <div class="meta-row"><span>50분</span><span>2차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 17. 학습 순서 ===== -->
+<section class="slide" aria-label="17. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>로그인부터 화면 설정까지의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 18. 계정 구조 ===== -->
+<section class="slide" aria-label="18. 계정 구조">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h2>계정 구조</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">이메일 주소와 구글 계정의 관계</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 19. 로그인 절차 ===== -->
+<section class="slide" aria-label="19. 로그인 절차">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h2>로그인 절차</h2>
+    <ul class="bullets"><li>핵심: 아이디와 비밀번호 입력 순서</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 20. 계정 전환 ===== -->
+<section class="slide" aria-label="20. 계정 전환">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h2>계정 전환</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">여러 계정의 구분과 전환</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 21. 프로필 메뉴 ===== -->
+<section class="slide" aria-label="21. 프로필 메뉴">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h2>프로필 메뉴</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">계정 정보와 로그아웃 위치</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 22. 비밀번호 원칙 ===== -->
+<section class="slide" aria-label="22. 비밀번호 원칙">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h2>비밀번호 원칙</h2>
+    <ul class="bullets"><li>핵심: 기억하기 쉽고 추측하기 어려운 비밀번호</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 23. 이중 인증 ===== -->
+<section class="slide" aria-label="23. 이중 인증">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h2>이중 인증</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">추가 본인 확인의 필요성</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 24. 로그인 실습 ===== -->
+<section class="slide" aria-label="24. 로그인 실습">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면 · 실습</div>
+    <h2>로그인 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-24">실습 목표: 계정 로그인과 프로필 확인
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-24" aria-label="로그인 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 25. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="25. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">화면에서 눈 떼기와 자세 점검 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 26. 브라우저 화면 ===== -->
+<section class="slide" aria-label="26. 브라우저 화면">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h2>브라우저 화면</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">주소창·탭·뒤로 가기 기능</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 27. 화면 확대 ===== -->
+<section class="slide" aria-label="27. 화면 확대">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h2>화면 확대</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">글자와 화면 크기 조절</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 28. 즐겨찾기 ===== -->
+<section class="slide" aria-label="28. 즐겨찾기">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h2>즐겨찾기</h2>
+    <ul class="bullets"><li>핵심: 자주 쓰는 서비스 바로 열기</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 29. 환경 설정 실습 ===== -->
+<section class="slide" aria-label="29. 환경 설정 실습">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면 · 실습</div>
+    <h2>환경 설정 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-29">실습 목표: 화면 확대와 즐겨찾기 등록
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-29" aria-label="환경 설정 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 30. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="30. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">2차시 · 구글 계정과 화면</div>
+    <h1>차시 마침</h1>
+    <p class="lede">안전한 접속 습관 정리</p>
+  </div>
+</section>
+
+<!-- ===== 31. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="31. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h1>구글 드라이브 기초</h1>
+    <p class="lede">구글 드라이브 기본 사용 목표</p>
+    <div class="meta-row"><span>50분</span><span>3차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 32. 학습 순서 ===== -->
+<section class="slide" aria-label="32. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>접속·업로드·열기·다운로드 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 33. 드라이브 역할 ===== -->
+<section class="slide" aria-label="33. 드라이브 역할">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h2>드라이브 역할</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">온라인 파일 보관함의 개념</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 34. 화면 구조 ===== -->
+<section class="slide" aria-label="34. 화면 구조">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h2>화면 구조</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">왼쪽 메뉴와 파일 영역의 구분</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 35. 내 드라이브 ===== -->
+<section class="slide" aria-label="35. 내 드라이브">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h2>내 드라이브</h2>
+    <ul class="bullets"><li>핵심: 개인 파일과 폴더의 저장 위치</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 36. 새로 만들기 ===== -->
+<section class="slide" aria-label="36. 새로 만들기">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h2>새로 만들기</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">파일과 폴더 생성 메뉴</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 37. 파일 업로드 ===== -->
+<section class="slide" aria-label="37. 파일 업로드">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h2>파일 업로드</h2>
+    <ul class="bullets"><li>핵심: 컴퓨터 파일을 드라이브에 저장하는 방법</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 38. 폴더 업로드 ===== -->
+<section class="slide" aria-label="38. 폴더 업로드">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h2>폴더 업로드</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">여러 파일을 한 번에 올리는 방법</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 39. 업로드 실습 ===== -->
+<section class="slide" aria-label="39. 업로드 실습">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초 · 실습</div>
+    <h2>업로드 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-39">실습 목표: 예제 파일과 폴더 업로드
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-39" aria-label="업로드 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 40. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="40. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">손가락과 어깨 이완 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 41. 파일 열기 ===== -->
+<section class="slide" aria-label="41. 파일 열기">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h2>파일 열기</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>파일 종류에 따른 열기 방식</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 42. 미리보기 ===== -->
+<section class="slide" aria-label="42. 미리보기">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h2>미리보기</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">파일을 수정하지 않고 확인하는 방법</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 43. 파일 다운로드 ===== -->
+<section class="slide" aria-label="43. 파일 다운로드">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h2>파일 다운로드</h2>
+    <ul class="bullets"><li>핵심: 드라이브 파일을 컴퓨터에 저장하는 방법</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 44. 기본 작업 실습 ===== -->
+<section class="slide" aria-label="44. 기본 작업 실습">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초 · 실습</div>
+    <h2>기본 작업 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-44">실습 목표: 업로드·열기·다운로드 반복
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-44" aria-label="기본 작업 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 45. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="45. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">3차시 · 구글 드라이브 기초</div>
+    <h1>차시 마침</h1>
+    <p class="lede">드라이브 기본 작업 요약</p>
+  </div>
+</section>
+
+<!-- ===== 46. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="46. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h1>구글 드라이브 정리</h1>
+    <p class="lede">파일을 쉽게 찾는 정리 방법</p>
+    <div class="meta-row"><span>50분</span><span>4차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 47. 학습 순서 ===== -->
+<section class="slide" aria-label="47. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>폴더·이름·검색·바로가기 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 48. 폴더 구조 ===== -->
+<section class="slide" aria-label="48. 폴더 구조">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h2>폴더 구조</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">큰 분류에서 작은 분류로 나누기</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 49. 이름 규칙 ===== -->
+<section class="slide" aria-label="49. 이름 규칙">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h2>이름 규칙</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">날짜·업무명·버전이 포함된 파일명</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 50. 폴더 생성 ===== -->
+<section class="slide" aria-label="50. 폴더 생성">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h2>폴더 생성</h2>
+    <ul class="bullets"><li>핵심: 새 폴더 만들기와 위치 선택</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 51. 파일 이동 ===== -->
+<section class="slide" aria-label="51. 파일 이동">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h2>파일 이동</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">파일을 원하는 폴더로 옮기는 방법</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 52. 색상 구분 ===== -->
+<section class="slide" aria-label="52. 색상 구분">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h2>색상 구분</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">중요 폴더를 색상으로 표시하는 방법</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 53. 별표 표시 ===== -->
+<section class="slide" aria-label="53. 별표 표시">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h2>별표 표시</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">자주 쓰는 파일을 빠르게 찾는 방법</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 54. 폴더 정리 실습 ===== -->
+<section class="slide" aria-label="54. 폴더 정리 실습">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리 · 실습</div>
+    <h2>폴더 정리 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-54">실습 목표: 예제 파일을 기준별로 분류
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-54" aria-label="폴더 정리 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 55. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="55. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">자리에서 일어나 몸 풀기 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 56. 검색 기능 ===== -->
+<section class="slide" aria-label="56. 검색 기능">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h2>검색 기능</h2>
+    <ul class="bullets"><li>핵심: 이름과 파일 종류로 찾는 방법</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 57. 검색 조건 ===== -->
+<section class="slide" aria-label="57. 검색 조건">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h2>검색 조건</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>소유자·날짜·위치를 이용한 검색</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 58. 바로가기 ===== -->
+<section class="slide" aria-label="58. 바로가기">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h2>바로가기</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">원본 이동 없이 접근 위치 추가하기</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 59. 파일 찾기 실습 ===== -->
+<section class="slide" aria-label="59. 파일 찾기 실습">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리 · 실습</div>
+    <h2>파일 찾기 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-59">실습 목표: 조건 검색과 바로가기 만들기
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-59" aria-label="파일 찾기 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 60. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="60. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">4차시 · 구글 드라이브 정리</div>
+    <h1>차시 마침</h1>
+    <p class="lede">지속 가능한 정리 원칙 요약</p>
+  </div>
+</section>
+
+<!-- ===== 61. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="61. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h1>구글 드라이브 공유</h1>
+    <p class="lede">안전한 파일 공유 학습 목표</p>
+    <div class="meta-row"><span>50분</span><span>5차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 62. 학습 순서 ===== -->
+<section class="slide" aria-label="62. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>대상·권한·링크·회수의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 63. 공유 개념 ===== -->
+<section class="slide" aria-label="63. 공유 개념">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h2>공유 개념</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">파일 복사와 공동 접근의 차이</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 64. 공유 대상 ===== -->
+<section class="slide" aria-label="64. 공유 대상">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h2>공유 대상</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">특정 사용자와 링크 사용자의 구분</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 65. 보기 권한 ===== -->
+<section class="slide" aria-label="65. 보기 권한">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h2>보기 권한</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">내용 확인만 가능한 권한</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 66. 댓글 권한 ===== -->
+<section class="slide" aria-label="66. 댓글 권한">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h2>댓글 권한</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">의견 작성이 가능한 권한</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 67. 편집 권한 ===== -->
+<section class="slide" aria-label="67. 편집 권한">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h2>편집 권한</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">내용을 직접 변경할 수 있는 권한</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 68. 권한 선택 ===== -->
+<section class="slide" aria-label="68. 권한 선택">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h2>권한 선택</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>상황에 맞는 최소 권한 결정</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 69. 사용자 공유 실습 ===== -->
+<section class="slide" aria-label="69. 사용자 공유 실습">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유 · 실습</div>
+    <h2>사용자 공유 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-69">실습 목표: 이메일 주소로 파일 공유
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-69" aria-label="사용자 공유 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 70. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="70. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">눈·목·어깨 휴식 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 71. 링크 공유 ===== -->
+<section class="slide" aria-label="71. 링크 공유">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h2>링크 공유</h2>
+    <ul class="bullets"><li>핵심: 공유 링크 생성과 전달</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 72. 소유권 이해 ===== -->
+<section class="slide" aria-label="72. 소유권 이해">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h2>소유권 이해</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">파일 소유자와 참여자의 차이</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 73. 공유 회수 ===== -->
+<section class="slide" aria-label="73. 공유 회수">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h2>공유 회수</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">사용자 삭제와 권한 변경</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 74. 보안 점검 실습 ===== -->
+<section class="slide" aria-label="74. 보안 점검 실습">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유 · 실습</div>
+    <h2>보안 점검 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-74">실습 목표: 공유 대상과 권한 다시 확인
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-74" aria-label="보안 점검 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 75. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="75. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">5차시 · 구글 드라이브 공유</div>
+    <h1>차시 마침</h1>
+    <p class="lede">공유 전 확인 사항 요약</p>
+  </div>
+</section>
+
+<!-- ===== 76. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="76. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h1>구글 문서 기초</h1>
+    <p class="lede">구글 문서 작성 목표</p>
+    <div class="meta-row"><span>50분</span><span>6차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 77. 학습 순서 ===== -->
+<section class="slide" aria-label="77. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>생성·입력·서식·저장의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 78. 문서 역할 ===== -->
+<section class="slide" aria-label="78. 문서 역할">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h2>문서 역할</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">온라인 문서 작성 도구의 특징</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 79. 문서 생성 ===== -->
+<section class="slide" aria-label="79. 문서 생성">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h2>문서 생성</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">빈 문서와 서식 파일의 차이</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 80. 문서 화면 ===== -->
+<section class="slide" aria-label="80. 문서 화면">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h2>문서 화면</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">메뉴·도구 모음·본문 영역</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 81. 제목 설정 ===== -->
+<section class="slide" aria-label="81. 제목 설정">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h2>제목 설정</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">파일 이름과 문서 제목의 구분</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 82. 글자 입력 ===== -->
+<section class="slide" aria-label="82. 글자 입력">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h2>글자 입력</h2>
+    <ul class="bullets"><li>핵심: 커서와 문단의 기본 개념</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 83. 자동 저장 ===== -->
+<section class="slide" aria-label="83. 자동 저장">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h2>자동 저장</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">입력 내용이 저장되는 방식</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 84. 입력 실습 ===== -->
+<section class="slide" aria-label="84. 입력 실습">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초 · 실습</div>
+    <h2>입력 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-84">실습 목표: 짧은 안내문 작성
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-84" aria-label="입력 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 85. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="85. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">손목과 손가락 스트레칭 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 86. 글자 서식 ===== -->
+<section class="slide" aria-label="86. 글자 서식">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h2>글자 서식</h2>
+    <ul class="bullets"><li>핵심: 크기·굵기·색상의 사용</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 87. 문단 정렬 ===== -->
+<section class="slide" aria-label="87. 문단 정렬">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h2>문단 정렬</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">왼쪽·가운데·오른쪽 정렬</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 88. 목록 구성 ===== -->
+<section class="slide" aria-label="88. 목록 구성">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h2>목록 구성</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">번호 목록과 글머리표 목록</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 89. 안내문 실습 ===== -->
+<section class="slide" aria-label="89. 안내문 실습">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초 · 실습</div>
+    <h2>안내문 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-89">실습 목표: 제목과 목록이 있는 문서 완성
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-89" aria-label="안내문 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 90. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="90. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">6차시 · 구글 문서 기초</div>
+    <h1>차시 마침</h1>
+    <p class="lede">기본 문서 작성 과정 요약</p>
+  </div>
+</section>
+
+<!-- ===== 91. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="91. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h1>구글 문서 편집</h1>
+    <p class="lede">읽기 편한 문서 편집 목표</p>
+    <div class="meta-row"><span>50분</span><span>7차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 92. 학습 순서 ===== -->
+<section class="slide" aria-label="92. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>표·이미지·링크·페이지 구성</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 93. 편집 원칙 ===== -->
+<section class="slide" aria-label="93. 편집 원칙">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h2>편집 원칙</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">강조 요소를 적게 사용하는 이유</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 94. 표 삽입 ===== -->
+<section class="slide" aria-label="94. 표 삽입">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h2>표 삽입</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">행과 열로 정보 정리하기</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 95. 표 편집 ===== -->
+<section class="slide" aria-label="95. 표 편집">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h2>표 편집</h2>
+    <ul class="bullets"><li>핵심: 행·열 추가와 셀 크기 조절</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 96. 이미지 삽입 ===== -->
+<section class="slide" aria-label="96. 이미지 삽입">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h2>이미지 삽입</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">컴퓨터와 드라이브 이미지 넣기</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 97. 이미지 배치 ===== -->
+<section class="slide" aria-label="97. 이미지 배치">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h2>이미지 배치</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">글과 이미지의 위치 관계</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 98. 링크 삽입 ===== -->
+<section class="slide" aria-label="98. 링크 삽입">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h2>링크 삽입</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">글자에 웹주소 연결하기</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 99. 표 작성 실습 ===== -->
+<section class="slide" aria-label="99. 표 작성 실습">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집 · 실습</div>
+    <h2>표 작성 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-99">실습 목표: 간단한 일정표 만들기
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-99" aria-label="표 작성 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 100. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="100. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">먼 곳 바라보기 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 101. 페이지 설정 ===== -->
+<section class="slide" aria-label="101. 페이지 설정">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h2>페이지 설정</h2>
+    <ul class="bullets"><li>핵심: 용지 방향과 여백 설정</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 102. 머리글 구성 ===== -->
+<section class="slide" aria-label="102. 머리글 구성">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h2>머리글 구성</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">반복 정보가 들어가는 영역</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 103. 페이지 번호 ===== -->
+<section class="slide" aria-label="103. 페이지 번호">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h2>페이지 번호</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">문서 쪽 번호 표시 방법</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 104. 문서 편집 실습 ===== -->
+<section class="slide" aria-label="104. 문서 편집 실습">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집 · 실습</div>
+    <h2>문서 편집 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-104">실습 목표: 이미지가 포함된 안내문 완성
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-104" aria-label="문서 편집 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 105. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="105. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">7차시 · 구글 문서 편집</div>
+    <h1>차시 마침</h1>
+    <p class="lede">읽기 쉬운 문서 원칙 요약</p>
+  </div>
+</section>
+
+<!-- ===== 106. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="106. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h1>구글 문서 협업</h1>
+    <p class="lede">공동 문서 작업 목표</p>
+    <div class="meta-row"><span>50분</span><span>8차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 107. 학습 순서 ===== -->
+<section class="slide" aria-label="107. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>공유·댓글·제안·복원의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 108. 공동 편집 ===== -->
+<section class="slide" aria-label="108. 공동 편집">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h2>공동 편집</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">여러 사람이 동시에 작업하는 방식</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 109. 참여자 표시 ===== -->
+<section class="slide" aria-label="109. 참여자 표시">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h2>참여자 표시</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">색상 커서와 사용자 아이콘의 의미</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 110. 댓글 작성 ===== -->
+<section class="slide" aria-label="110. 댓글 작성">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h2>댓글 작성</h2>
+    <ul class="bullets"><li>핵심: 특정 내용에 의견 남기기</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 111. 사용자 언급 ===== -->
+<section class="slide" aria-label="111. 사용자 언급">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h2>사용자 언급</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">상대방에게 댓글 알림 보내기</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 112. 댓글 답변 ===== -->
+<section class="slide" aria-label="112. 댓글 답변">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h2>댓글 답변</h2>
+    <ul class="bullets"><li>핵심: 의견을 주고받는 순서</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 113. 댓글 해결 ===== -->
+<section class="slide" aria-label="113. 댓글 해결">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h2>댓글 해결</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">논의가 끝난 댓글 정리</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 114. 댓글 실습 ===== -->
+<section class="slide" aria-label="114. 댓글 실습">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업 · 실습</div>
+    <h2>댓글 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-114">실습 목표: 문장 선택과 의견 교환
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-114" aria-label="댓글 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 115. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="115. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">자세와 화면 거리 점검 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 116. 제안 모드 ===== -->
+<section class="slide" aria-label="116. 제안 모드">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h2>제안 모드</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">원문을 유지하며 수정 제안하기</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 117. 제안 처리 ===== -->
+<section class="slide" aria-label="117. 제안 처리">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h2>제안 처리</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">수정안 수락과 거부</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 118. 버전 기록 ===== -->
+<section class="slide" aria-label="118. 버전 기록">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h2>버전 기록</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">이전 편집 내용과 작성자 확인</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 119. 협업 실습 ===== -->
+<section class="slide" aria-label="119. 협업 실습">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업 · 실습</div>
+    <h2>협업 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-119">실습 목표: 제안 검토와 이전 버전 확인
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-119" aria-label="협업 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 120. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="120. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">8차시 · 구글 문서 협업</div>
+    <h1>차시 마침</h1>
+    <p class="lede">협업 예절과 역할 요약</p>
+  </div>
+</section>
+
+<!-- ===== 121. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="121. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h1>구글 스프레드시트 기초</h1>
+    <p class="lede">스프레드시트 기본 학습 목표</p>
+    <div class="meta-row"><span>50분</span><span>9차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 122. 학습 순서 ===== -->
+<section class="slide" aria-label="122. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>입력·서식·계산·저장의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 123. 스프레드시트 역할 ===== -->
+<section class="slide" aria-label="123. 스프레드시트 역할">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h2>스프레드시트 역할</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">숫자와 목록을 관리하는 도구</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 124. 화면 구조 ===== -->
+<section class="slide" aria-label="124. 화면 구조">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h2>화면 구조</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>행·열·셀·시트의 구분</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 125. 셀 주소 ===== -->
+<section class="slide" aria-label="125. 셀 주소">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h2>셀 주소</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">열 문자와 행 번호의 조합</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 126. 데이터 입력 ===== -->
+<section class="slide" aria-label="126. 데이터 입력">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h2>데이터 입력</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>문자·숫자·날짜 입력 방식</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 127. 셀 이동 ===== -->
+<section class="slide" aria-label="127. 셀 이동">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h2>셀 이동</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">마우스와 키보드를 이용한 이동</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 128. 자동 채우기 ===== -->
+<section class="slide" aria-label="128. 자동 채우기">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h2>자동 채우기</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">반복 데이터의 빠른 입력</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 129. 명단 입력 실습 ===== -->
+<section class="slide" aria-label="129. 명단 입력 실습">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초 · 실습</div>
+    <h2>명단 입력 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-129">실습 목표: 이름·연락처·날짜 표 작성
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-129" aria-label="명단 입력 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 130. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="130. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">손목과 어깨 이완 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 131. 표 서식 ===== -->
+<section class="slide" aria-label="131. 표 서식">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h2>표 서식</h2>
+    <ul class="bullets"><li>핵심: 글자·배경·테두리 설정</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 132. 열 너비 ===== -->
+<section class="slide" aria-label="132. 열 너비">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h2>열 너비</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">내용에 맞는 열 크기 조정</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 133. 기본 수식 ===== -->
+<section class="slide" aria-label="133. 기본 수식">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h2>기본 수식</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">등호로 시작하는 계산 방식</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 134. 계산 실습 ===== -->
+<section class="slide" aria-label="134. 계산 실습">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초 · 실습</div>
+    <h2>계산 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-134">실습 목표: 덧셈과 합계가 있는 표 완성
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-134" aria-label="계산 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 135. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="135. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">9차시 · 구글 스프레드시트 기초</div>
+    <h1>차시 마침</h1>
+    <p class="lede">셀 입력과 계산 원리 요약</p>
+  </div>
+</section>
+
+<!-- ===== 136. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="136. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h1>구글 스프레드시트 활용</h1>
+    <p class="lede">데이터 정리와 계산 활용 목표</p>
+    <div class="meta-row"><span>50분</span><span>10차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 137. 학습 순서 ===== -->
+<section class="slide" aria-label="137. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>함수·정렬·필터·차트의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 138. 함수 개념 ===== -->
+<section class="slide" aria-label="138. 함수 개념">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h2>함수 개념</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">자주 쓰는 계산을 줄여 주는 기능</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 139. 합계 함수 ===== -->
+<section class="slide" aria-label="139. 합계 함수">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h2>합계 함수</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">SUM을 이용한 범위 합계</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 140. 평균 함수 ===== -->
+<section class="slide" aria-label="140. 평균 함수">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h2>평균 함수</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">AVERAGE를 이용한 평균 계산</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 141. 최대·최소 함수 ===== -->
+<section class="slide" aria-label="141. 최대·최소 함수">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h2>최대·최소 함수</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">큰 값과 작은 값 찾기</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 142. 수식 복사 ===== -->
+<section class="slide" aria-label="142. 수식 복사">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h2>수식 복사</h2>
+    <ul class="bullets"><li>핵심: 같은 계산을 여러 행에 적용</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 143. 오류 확인 ===== -->
+<section class="slide" aria-label="143. 오류 확인">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h2>오류 확인</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>잘못된 범위와 입력값 점검</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 144. 함수 실습 ===== -->
+<section class="slide" aria-label="144. 함수 실습">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용 · 실습</div>
+    <h2>함수 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-144">실습 목표: 월별 지출 합계와 평균 계산
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-144" aria-label="함수 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 145. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="145. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">눈과 허리 휴식 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 146. 데이터 정렬 ===== -->
+<section class="slide" aria-label="146. 데이터 정렬">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h2>데이터 정렬</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">가나다순과 크기순 배열</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 147. 데이터 필터 ===== -->
+<section class="slide" aria-label="147. 데이터 필터">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h2>데이터 필터</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">필요한 항목만 화면에 표시</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 148. 기본 차트 ===== -->
+<section class="slide" aria-label="148. 기본 차트">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h2>기본 차트</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">표를 막대그래프로 표현</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 149. 데이터 실습 ===== -->
+<section class="slide" aria-label="149. 데이터 실습">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용 · 실습</div>
+    <h2>데이터 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-149">실습 목표: 정렬·필터·차트 완성
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-149" aria-label="데이터 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 150. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="150. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">10차시 · 구글 스프레드시트 활용</div>
+    <h1>차시 마침</h1>
+    <p class="lede">데이터 확인 순서 요약</p>
+  </div>
+</section>
+
+<!-- ===== 151. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="151. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h1>구글 프레젠테이션 기초</h1>
+    <p class="lede">기본 발표 자료 제작 목표</p>
+    <div class="meta-row"><span>50분</span><span>11차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 152. 학습 순서 ===== -->
+<section class="slide" aria-label="152. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>생성·구성·입력·발표의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 153. 발표 자료 역할 ===== -->
+<section class="slide" aria-label="153. 발표 자료 역할">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h2>발표 자료 역할</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">말과 화면의 역할 구분</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 154. 화면 구조 ===== -->
+<section class="slide" aria-label="154. 화면 구조">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h2>화면 구조</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">슬라이드 목록·편집 영역·메뉴</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 155. 새 자료 생성 ===== -->
+<section class="slide" aria-label="155. 새 자료 생성">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h2>새 자료 생성</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">빈 프레젠테이션과 테마 선택</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 156. 슬라이드 추가 ===== -->
+<section class="slide" aria-label="156. 슬라이드 추가">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h2>슬라이드 추가</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">새 장 추가와 복제</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 157. 레이아웃 선택 ===== -->
+<section class="slide" aria-label="157. 레이아웃 선택">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h2>레이아웃 선택</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">제목·본문·이미지 배치 유형</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 158. 제목 작성 ===== -->
+<section class="slide" aria-label="158. 제목 작성">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h2>제목 작성</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">한 장의 핵심을 드러내는 제목</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 159. 기본 제작 실습 ===== -->
+<section class="slide" aria-label="159. 기본 제작 실습">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초 · 실습</div>
+    <h2>기본 제작 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-159">실습 목표: 제목과 본문 슬라이드 작성
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-159" aria-label="기본 제작 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 160. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="160. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">먼 곳 바라보기와 어깨 이완 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 161. 글자 편집 ===== -->
+<section class="slide" aria-label="161. 글자 편집">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h2>글자 편집</h2>
+    <ul class="bullets"><li>핵심: 크기·색상·정렬 조정</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 162. 슬라이드 이동 ===== -->
+<section class="slide" aria-label="162. 슬라이드 이동">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h2>슬라이드 이동</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">순서 변경과 삭제</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 163. 발표 실행 ===== -->
+<section class="slide" aria-label="163. 발표 실행">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h2>발표 실행</h2>
+    <ul class="bullets"><li>핵심: 발표 화면 시작과 종료</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 164. 미니 발표 실습 ===== -->
+<section class="slide" aria-label="164. 미니 발표 실습">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초 · 실습</div>
+    <h2>미니 발표 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-164">실습 목표: 세 장짜리 자기소개 자료 제작
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-164" aria-label="미니 발표 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 165. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="165. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">11차시 · 구글 프레젠테이션 기초</div>
+    <h1>차시 마침</h1>
+    <p class="lede">한 장 한 메시지 원칙 요약</p>
+  </div>
+</section>
+
+<!-- ===== 166. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="166. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h1>구글 프레젠테이션 활용</h1>
+    <p class="lede">보기 좋은 발표 자료 제작 목표</p>
+    <div class="meta-row"><span>50분</span><span>12차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 167. 학습 순서 ===== -->
+<section class="slide" aria-label="167. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>이미지·도형·정렬·발표 기능</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 168. 시각 구성 ===== -->
+<section class="slide" aria-label="168. 시각 구성">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h2>시각 구성</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">여백과 크기로 중요도 표현</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 169. 이미지 삽입 ===== -->
+<section class="slide" aria-label="169. 이미지 삽입">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h2>이미지 삽입</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">사진을 슬라이드에 추가하는 방법</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 170. 이미지 자르기 ===== -->
+<section class="slide" aria-label="170. 이미지 자르기">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h2>이미지 자르기</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">필요한 부분만 보이게 조정</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 171. 도형 활용 ===== -->
+<section class="slide" aria-label="171. 도형 활용">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h2>도형 활용</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">절차와 관계를 단순하게 표현</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 172. 요소 정렬 ===== -->
+<section class="slide" aria-label="172. 요소 정렬">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h2>요소 정렬</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">여러 개체의 위치 맞추기</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 173. 색상 통일 ===== -->
+<section class="slide" aria-label="173. 색상 통일">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h2>색상 통일</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">적은 수의 색상을 반복하는 원칙</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 174. 시각화 실습 ===== -->
+<section class="slide" aria-label="174. 시각화 실습">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용 · 실습</div>
+    <h2>시각화 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-174">실습 목표: 이미지와 도형이 있는 안내 장 제작
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-174" aria-label="시각화 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 175. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="175. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">눈과 손의 휴식 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 176. 전환 효과 ===== -->
+<section class="slide" aria-label="176. 전환 효과">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h2>전환 효과</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">장면 전환 효과의 최소 사용</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 177. 발표자 보기 ===== -->
+<section class="slide" aria-label="177. 발표자 보기">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h2>발표자 보기</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">발표 시간과 발표 노트 확인</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 178. 공유 발표 ===== -->
+<section class="slide" aria-label="178. 공유 발표">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h2>공유 발표</h2>
+    <ul class="bullets"><li>핵심: 링크를 이용한 자료 공유</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 179. 발표 실습 ===== -->
+<section class="slide" aria-label="179. 발표 실습">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용 · 실습</div>
+    <h2>발표 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-179">실습 목표: 다섯 장짜리 정보 안내 자료 완성
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-179" aria-label="발표 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 180. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="180. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">12차시 · 구글 프레젠테이션 활용</div>
+    <h1>차시 마침</h1>
+    <p class="lede">가독성 높은 발표 자료 점검</p>
+  </div>
+</section>
+
+<!-- ===== 181. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="181. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h1>지메일 기초</h1>
+    <p class="lede">지메일 기본 사용 목표</p>
+    <div class="meta-row"><span>50분</span><span>13차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 182. 학습 순서 ===== -->
+<section class="slide" aria-label="182. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>읽기·쓰기·답장·첨부의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 183. 메일 화면 ===== -->
+<section class="slide" aria-label="183. 메일 화면">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h2>메일 화면</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">받은편지함과 왼쪽 메뉴의 구조</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 184. 메일 목록 ===== -->
+<section class="slide" aria-label="184. 메일 목록">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h2>메일 목록</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>보낸 사람·제목·날짜 정보</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 185. 메일 열기 ===== -->
+<section class="slide" aria-label="185. 메일 열기">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h2>메일 열기</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">본문과 첨부 파일 확인</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 186. 새 메일 ===== -->
+<section class="slide" aria-label="186. 새 메일">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h2>새 메일</h2>
+    <ul class="bullets"><li>핵심: 작성 창을 여는 방법</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 187. 받는 사람 ===== -->
+<section class="slide" aria-label="187. 받는 사람">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h2>받는 사람</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">수신자 주소 입력과 확인</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 188. 메일 제목 ===== -->
+<section class="slide" aria-label="188. 메일 제목">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h2>메일 제목</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">내용을 예상할 수 있는 제목 작성</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 189. 메일 작성 실습 ===== -->
+<section class="slide" aria-label="189. 메일 작성 실습">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초 · 실습</div>
+    <h2>메일 작성 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-189">실습 목표: 짧은 문의 메일 작성
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-189" aria-label="메일 작성 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 190. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="190. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">눈과 목 휴식 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 191. 답장 기능 ===== -->
+<section class="slide" aria-label="191. 답장 기능">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h2>답장 기능</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">답장과 전체 답장의 차이</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 192. 전달 기능 ===== -->
+<section class="slide" aria-label="192. 전달 기능">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h2>전달 기능</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">받은 메일을 다른 사람에게 보내기</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 193. 파일 첨부 ===== -->
+<section class="slide" aria-label="193. 파일 첨부">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h2>파일 첨부</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">컴퓨터 파일과 드라이브 파일 첨부</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 194. 메일 전송 실습 ===== -->
+<section class="slide" aria-label="194. 메일 전송 실습">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초 · 실습</div>
+    <h2>메일 전송 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-194">실습 목표: 첨부 파일이 있는 메일 주고받기
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-194" aria-label="메일 전송 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 195. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="195. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">13차시 · 지메일 기초</div>
+    <h1>차시 마침</h1>
+    <p class="lede">발송 전 확인 사항 요약</p>
+  </div>
+</section>
+
+<!-- ===== 196. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="196. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h1>지메일 활용</h1>
+    <p class="lede">메일 정리와 보안 활용 목표</p>
+    <div class="meta-row"><span>50분</span><span>14차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 197. 학습 순서 ===== -->
+<section class="slide" aria-label="197. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>검색·라벨·정리·보안의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 198. 메일 검색 ===== -->
+<section class="slide" aria-label="198. 메일 검색">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h2>메일 검색</h2>
+    <ul class="bullets"><li>핵심: 보낸 사람과 제목으로 찾기</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 199. 검색 조건 ===== -->
+<section class="slide" aria-label="199. 검색 조건">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h2>검색 조건</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>기간·첨부·읽음 상태 검색</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 200. 중요 표시 ===== -->
+<section class="slide" aria-label="200. 중요 표시">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h2>중요 표시</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">나중에 확인할 메일 표시</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 201. 라벨 기능 ===== -->
+<section class="slide" aria-label="201. 라벨 기능">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h2>라벨 기능</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">메일에 분류표 붙이기</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 202. 보관 기능 ===== -->
+<section class="slide" aria-label="202. 보관 기능">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h2>보관 기능</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">삭제하지 않고 받은편지함 정리</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 203. 삭제 기능 ===== -->
+<section class="slide" aria-label="203. 삭제 기능">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h2>삭제 기능</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">휴지통 이동과 완전 삭제의 차이</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 204. 메일 정리 실습 ===== -->
+<section class="slide" aria-label="204. 메일 정리 실습">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용 · 실습</div>
+    <h2>메일 정리 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-204">실습 목표: 검색·라벨·보관 반복
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-204" aria-label="메일 정리 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 205. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="205. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">자리에서 일어나 몸 풀기 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 206. 스팸 구분 ===== -->
+<section class="slide" aria-label="206. 스팸 구분">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h2>스팸 구분</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">의심스러운 광고 메일의 특징</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 207. 피싱 구분 ===== -->
+<section class="slide" aria-label="207. 피싱 구분">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h2>피싱 구분</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">개인정보를 노리는 가짜 메일의 특징</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 208. 링크 점검 ===== -->
+<section class="slide" aria-label="208. 링크 점검">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h2>링크 점검</h2>
+    <ul class="bullets"><li>핵심: 누르기 전 주소와 발신자 확인</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 209. 보안 판단 실습 ===== -->
+<section class="slide" aria-label="209. 보안 판단 실습">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용 · 실습</div>
+    <h2>보안 판단 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-209">실습 목표: 안전한 메일과 의심 메일 구분
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-209" aria-label="보안 판단 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 210. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="210. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">14차시 · 지메일 활용</div>
+    <h1>차시 마침</h1>
+    <p class="lede">안전한 메일 사용 원칙 요약</p>
+  </div>
+</section>
+
+<!-- ===== 211. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="211. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h1>구글 캘린더</h1>
+    <p class="lede">일정과 약속 관리 목표</p>
+    <div class="meta-row"><span>50분</span><span>15차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 212. 학습 순서 ===== -->
+<section class="slide" aria-label="212. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>보기·등록·초대·알림의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 213. 캘린더 화면 ===== -->
+<section class="slide" aria-label="213. 캘린더 화면">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h2>캘린더 화면</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">월·주·일 보기의 차이</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 214. 일정 만들기 ===== -->
+<section class="slide" aria-label="214. 일정 만들기">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h2>일정 만들기</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">제목·날짜·시간 입력</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 215. 종일 일정 ===== -->
+<section class="slide" aria-label="215. 종일 일정">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h2>종일 일정</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">시간이 정해지지 않은 일정 등록</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 216. 반복 일정 ===== -->
+<section class="slide" aria-label="216. 반복 일정">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h2>반복 일정</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">매주·매월 일정 자동 등록</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 217. 일정 수정 ===== -->
+<section class="slide" aria-label="217. 일정 수정">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h2>일정 수정</h2>
+    <ul class="bullets"><li>핵심: 날짜와 시간 변경</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 218. 일정 삭제 ===== -->
+<section class="slide" aria-label="218. 일정 삭제">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h2>일정 삭제</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">한 번의 일정과 반복 일정 삭제</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 219. 일정 등록 실습 ===== -->
+<section class="slide" aria-label="219. 일정 등록 실습">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더 · 실습</div>
+    <h2>일정 등록 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-219">실습 목표: 개인 일정과 반복 일정 만들기
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-219" aria-label="일정 등록 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 220. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="220. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">목과 허리 스트레칭 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 221. 참석자 초대 ===== -->
+<section class="slide" aria-label="221. 참석자 초대">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h2>참석자 초대</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">이메일 주소로 일정 공유</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 222. 참석 여부 ===== -->
+<section class="slide" aria-label="222. 참석 여부">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h2>참석 여부</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">수락·미정·거절의 의미</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 223. 알림 설정 ===== -->
+<section class="slide" aria-label="223. 알림 설정">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h2>알림 설정</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">미리 알림 시간 조정</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 224. 회의 일정 실습 ===== -->
+<section class="slide" aria-label="224. 회의 일정 실습">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더 · 실습</div>
+    <h2>회의 일정 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-224">실습 목표: 참석자와 알림이 있는 일정 만들기
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-224" aria-label="회의 일정 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 225. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="225. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">15차시 · 구글 캘린더</div>
+    <h1>차시 마침</h1>
+    <p class="lede">일정 누락 방지 습관 요약</p>
+  </div>
+</section>
+
+<!-- ===== 226. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="226. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h1>구글 설문지</h1>
+    <p class="lede">온라인 설문 제작 목표</p>
+    <div class="meta-row"><span>50분</span><span>16차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 227. 학습 순서 ===== -->
+<section class="slide" aria-label="227. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>질문·설정·배포·응답의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 228. 설문지 역할 ===== -->
+<section class="slide" aria-label="228. 설문지 역할">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h2>설문지 역할</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">신청과 의견 수집의 활용 사례</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 229. 설문지 생성 ===== -->
+<section class="slide" aria-label="229. 설문지 생성">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h2>설문지 생성</h2>
+    <ul class="bullets"><li>핵심: 빈 설문지와 제목 설정</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 230. 단답형 질문 ===== -->
+<section class="slide" aria-label="230. 단답형 질문">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h2>단답형 질문</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">짧은 내용을 받는 질문 유형</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 231. 객관식 질문 ===== -->
+<section class="slide" aria-label="231. 객관식 질문">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h2>객관식 질문</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">하나의 선택을 받는 질문 유형</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 232. 체크박스 질문 ===== -->
+<section class="slide" aria-label="232. 체크박스 질문">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h2>체크박스 질문</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">여러 선택을 받는 질문 유형</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 233. 필수 응답 ===== -->
+<section class="slide" aria-label="233. 필수 응답">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h2>필수 응답</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">반드시 답해야 하는 질문 설정</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 234. 질문 작성 실습 ===== -->
+<section class="slide" aria-label="234. 질문 작성 실습">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지 · 실습</div>
+    <h2>질문 작성 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-234">실습 목표: 간단한 만족도 설문 구성
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-234" aria-label="질문 작성 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 235. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="235. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">눈과 손목 휴식 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 236. 미리보기 ===== -->
+<section class="slide" aria-label="236. 미리보기">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h2>미리보기</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">응답자 화면에서 설문 확인</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 237. 설문 배포 ===== -->
+<section class="slide" aria-label="237. 설문 배포">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h2>설문 배포</h2>
+    <ul class="bullets"><li>핵심: 링크를 복사해 전달하는 방법</li><li>순서: 위치 확인 → 선택 → 결과 확인</li><li>주의: 저장 위치와 계정 상태 확인</li></ul>
+  </div>
+</section>
+
+<!-- ===== 238. 응답 확인 ===== -->
+<section class="slide" aria-label="238. 응답 확인">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h2>응답 확인</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">개별 응답과 요약 결과 확인</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 239. 설문 운영 실습 ===== -->
+<section class="slide" aria-label="239. 설문 운영 실습">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지 · 실습</div>
+    <h2>설문 운영 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-239">실습 목표: 설문 배포와 상호 응답
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-239" aria-label="설문 운영 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 240. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="240. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">16차시 · 구글 설문지</div>
+    <h1>차시 마침</h1>
+    <p class="lede">좋은 질문 작성 원칙 요약</p>
+  </div>
+</section>
+
+<!-- ===== 241. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="241. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h1>구글 미트와 통합 업무</h1>
+    <p class="lede">온라인 회의와 서비스 연결 목표</p>
+    <div class="meta-row"><span>50분</span><span>17차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 242. 학습 순서 ===== -->
+<section class="slide" aria-label="242. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>참여·기기·화면·통합의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 243. 미트 역할 ===== -->
+<section class="slide" aria-label="243. 미트 역할">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h2>미트 역할</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">인터넷을 이용한 영상 회의</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 244. 회의 참여 ===== -->
+<section class="slide" aria-label="244. 회의 참여">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h2>회의 참여</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">링크와 회의 코드로 입장</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 245. 마이크 설정 ===== -->
+<section class="slide" aria-label="245. 마이크 설정">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h2>마이크 설정</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">음소거와 해제의 사용 시점</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 246. 카메라 설정 ===== -->
+<section class="slide" aria-label="246. 카메라 설정">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h2>카메라 설정</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">영상 켜기와 끄기</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 247. 참여자 화면 ===== -->
+<section class="slide" aria-label="247. 참여자 화면">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h2>참여자 화면</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">참석자 목록과 기본 메뉴</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 248. 채팅 기능 ===== -->
+<section class="slide" aria-label="248. 채팅 기능">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h2>채팅 기능</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">회의 중 문자 의견 전달</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 249. 회의 참여 실습 ===== -->
+<section class="slide" aria-label="249. 회의 참여 실습">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무 · 실습</div>
+    <h2>회의 참여 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-249">실습 목표: 입장·음소거·채팅 반복
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-249" aria-label="회의 참여 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 250. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="250. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">화면에서 눈 떼기 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 251. 화면 공유 ===== -->
+<section class="slide" aria-label="251. 화면 공유">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h2>화면 공유</h2>
+    <div class="card-grid c2">
+      <div class="card bad"><div class="t">구분 전</div><div class="d">기능과 결과를 섞어 이해</div></div>
+      <div class="card good"><div class="t">구분 후</div><div class="d">내 화면이나 특정 창 보여 주기</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 252. 캘린더 연결 ===== -->
+<section class="slide" aria-label="252. 캘린더 연결">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h2>캘린더 연결</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">일정에 미트 주소 추가</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 253. 드라이브 연결 ===== -->
+<section class="slide" aria-label="253. 드라이브 연결">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h2>드라이브 연결</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">회의 자료를 링크로 공유</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 254. 통합 업무 실습 ===== -->
+<section class="slide" aria-label="254. 통합 업무 실습">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무 · 실습</div>
+    <h2>통합 업무 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-254">실습 목표: 일정·회의·자료 공유 연결
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-254" aria-label="통합 업무 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 255. 차시 마침 ===== -->
+<section class="slide title-slide" aria-label="255. 차시 마침">
+  <div class="slide-content">
+    <div class="kicker">17차시 · 구글 미트와 통합 업무</div>
+    <h1>차시 마침</h1>
+    <p class="lede">온라인 회의 예절 요약</p>
+  </div>
+</section>
+
+<!-- ===== 256. 차시 표지 ===== -->
+<section class="slide title-slide" aria-label="256. 차시 표지">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h1>종합 실습과 마무리</h1>
+    <p class="lede">전체 과정 종합 목표</p>
+    <div class="meta-row"><span>50분</span><span>18차시</span><span>따라 하기 중심</span></div>
+  </div>
+</section>
+
+<!-- ===== 257. 학습 순서 ===== -->
+<section class="slide" aria-label="257. 학습 순서">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h2>학습 순서</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>과제·제작·공유·점검의 흐름</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 258. 업무 상황 ===== -->
+<section class="slide" aria-label="258. 업무 상황">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리 · 실습</div>
+    <h2>업무 상황</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-258">실습 목표: 소규모 모임을 준비하는 통합 과제
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-258" aria-label="업무 상황 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 259. 폴더 설계 ===== -->
+<section class="slide" aria-label="259. 폴더 설계">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h2>폴더 설계</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">모임 자료를 보관할 폴더 구조</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 260. 안내문 설계 ===== -->
+<section class="slide" aria-label="260. 안내문 설계">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h2>안내문 설계</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">구글 문서로 만들 안내 내용</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 261. 명단 설계 ===== -->
+<section class="slide" aria-label="261. 명단 설계">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h2>명단 설계</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>스프레드시트 참석자 표 구성</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 262. 홍보물 설계 ===== -->
+<section class="slide" aria-label="262. 홍보물 설계">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h2>홍보물 설계</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">프레젠테이션 안내 자료 구성</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 263. 신청서 설계 ===== -->
+<section class="slide" aria-label="263. 신청서 설계">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h2>신청서 설계</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">설문지 질문과 응답 항목 구성</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 264. 종합 제작 실습 ===== -->
+<section class="slide" aria-label="264. 종합 제작 실습">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리 · 실습</div>
+    <h2>종합 제작 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-264">실습 목표: 네 가지 서비스로 결과물 제작
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-264" aria-label="종합 제작 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 265. 휴식 안내 ===== -->
+<section class="slide dark" aria-label="265. 휴식 안내">
+  <div class="slide-content" style="align-items:center;text-align:center">
+    <div class="kicker">휴식</div>
+    <button type="button" class="break-big" data-minutes="10" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋" aria-label="휴식 타이머 10분"><span class="time">10:00</span></button>
+    <p class="lede">충분한 휴식과 진행 상황 확인 · 10분 뒤 수업 재개</p>
+  </div>
+</section>
+
+<!-- ===== 266. 공유 설정 ===== -->
+<section class="slide" aria-label="266. 공유 설정">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h2>공유 설정</h2>
+    <table class="tbl">
+      <thead><tr><th scope="col">구분</th><th scope="col">핵심</th></tr></thead>
+      <tbody><tr class="today"><td>학습</td><td>결과물별 대상과 권한 결정</td></tr><tr><td>확인</td><td>화면 위치와 선택 결과 확인</td></tr><tr><td>완료</td><td>같은 작업 직접 반복</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 267. 일정 초대 ===== -->
+<section class="slide" aria-label="267. 일정 초대">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h2>일정 초대</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">캘린더 일정과 미트 링크 연결</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 268. 최종 점검 실습 ===== -->
+<section class="slide" aria-label="268. 최종 점검 실습">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리 · 실습</div>
+    <h2>최종 점검 실습</h2>
+    <div class="prompt-card">
+      <div class="label">따라 하기</div>
+      <blockquote id="pt-268">실습 목표: 링크·권한·내용·일정 확인
+진행 순서: 화면 확인 → 직접 실행 → 결과 확인
+완료 기준: 같은 작업을 혼자 한 번 더 실행</blockquote>
+      <button type="button" class="copy-btn" data-copy-target="pt-268" aria-label="최종 점검 실습 안내 복사">복사</button>
+    </div>
+    <button type="button" class="timer-chip" data-minutes="8" title="클릭: 시작·일시정지 · 더블클릭 또는 R: 리셋">⏱ <span class="time">8:00</span> 실습 <span class="state">정지</span></button>
+  </div>
+</section>
+
+<!-- ===== 269. 과정 정리 ===== -->
+<section class="slide" aria-label="269. 과정 정리">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h2>과정 정리</h2>
+    <div class="card-grid c2">
+      <div class="card good"><div class="t">핵심</div><div class="d">18차시 핵심 기능과 활용 순서</div></div>
+      <div class="card"><div class="t">확인</div><div class="d">화면에서 위치 찾기와 직접 실행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 270. 과정 마침 ===== -->
+<section class="slide title-slide" aria-label="270. 과정 마침">
+  <div class="slide-content">
+    <div class="kicker">18차시 · 종합 실습과 마무리</div>
+    <h1>수고하셨습니다</h1>
+    <p class="lede">실천 과제와 교육 종료 안내</p>
+  </div>
+</section>
+
+</main>
+
+<div id="progress" aria-hidden="true"></div>
+<nav id="nav" aria-label="슬라이드 이동">
+  <a href="index.html" target="_blank" rel="noopener" class="hide-sm" aria-label="강의 홈 새 창으로 열기">⌂ 홈</a>
+  <button type="button" id="navPrev" aria-label="이전 슬라이드">◀</button>
+  <span id="counter" aria-live="polite">1 / 8</span>
+  <button type="button" id="navNext" aria-label="다음 슬라이드">▶</button>
+  <span class="grow"></span>
+  <span class="hint hide-sm">← → 이동 · G 전체보기 · P PDF</span>
+  <button type="button" id="gridBtn" aria-haspopup="dialog" aria-controls="gridOverlay">▦ 전체 보기</button>
+  <button type="button" id="printBtn" class="hide-sm">⎙ PDF 저장</button>
+</nav>
+
+<div class="grid-overlay" id="gridOverlay" role="dialog" aria-modal="true" aria-label="전체 슬라이드 보기">
+  <div class="grid-head"><h2>전체 보기</h2><button type="button" id="gridClose">닫기 (Esc)</button></div>
+  <div class="grid-list" id="gridList"></div>
+</div>
+
+<script>
+(function(){
+  /* ▼ 내 강의 고유 접두사로 변경 (예: 'ai0927_') */
+  var LS = 'mykit_';
+
+  var stage = document.getElementById('stage');
+  var slides = Array.prototype.slice.call(stage.querySelectorAll(':scope > section.slide'));
+  var total = slides.length;
+  var STORAGE_KEY = LS + 'slide';
+  var idx = 0;
+
+  function lsGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v){ try { localStorage.setItem(k, v); } catch (e) { /* 저장 불가 환경 · 무시 */ } }
+
+  /* 시작 위치: ?slide=N 우선, 없으면 마지막으로 본 장 */
+  var params = new URLSearchParams(location.search);
+  var qSlide = parseInt(params.get('slide'), 10);
+  if (!isNaN(qSlide) && qSlide >= 1 && qSlide <= total) {
+    idx = qSlide - 1;
+  } else {
+    var saved = parseInt(lsGet(STORAGE_KEY), 10);
+    if (!isNaN(saved) && saved >= 0 && saved < total) idx = saved;
+  }
+
+  var progressEl = document.getElementById('progress');
+  var counterEl = document.getElementById('counter');
+  var navPrev = document.getElementById('navPrev');
+  var navNext = document.getElementById('navNext');
+  var gridOverlay = document.getElementById('gridOverlay');
+  var gridList = document.getElementById('gridList');
+  var minis = [];
+  var lastFocus = null;
+
+  function show(i){
+    idx = Math.max(0, Math.min(total - 1, i));
+    slides.forEach(function(s, n){
+      s.classList.toggle('active', n === idx);
+      s.setAttribute('aria-hidden', n === idx ? 'false' : 'true');
+    });
+    progressEl.style.width = ((idx + 1) / total * 100) + '%';
+    counterEl.textContent = (idx + 1) + ' / ' + total;
+    navPrev.disabled = idx === 0;
+    navNext.disabled = idx === total - 1;
+    minis.forEach(function(m, n){ m.classList.toggle('current', n === idx); });
+    lsSet(STORAGE_KEY, String(idx));
+  }
+
+  function scaleMinis(){
+    minis.forEach(function(m){ m.firstChild.style.transform = 'scale(' + (m.clientWidth / 960) + ')'; });
+  }
+  window.addEventListener('resize', function(){ if (gridOverlay.classList.contains('open')) scaleMinis(); });
+  function openGrid(){
+    lastFocus = document.activeElement;
+    gridOverlay.classList.add('open');
+    scaleMinis();
+    var c = minis[idx];
+    if (c) { c.scrollIntoView({block:'center'}); c.focus(); }
+  }
+  function closeGrid(){
+    gridOverlay.classList.remove('open');
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  document.addEventListener('keydown', function(e){
+    var t = e.target;
+    if (t && t.closest && t.closest('input, textarea, select')) return;
+    if (gridOverlay.classList.contains('open')) {
+      if (e.key === 'Escape' || e.key === 'g' || e.key === 'G') { closeGrid(); }
+      return;
+    }
+    /* 버튼에 포커스가 있을 때 스페이스·엔터는 버튼 동작에 양보 */
+    var onButton = t && t.closest && t.closest('button, a');
+    if ((e.key === ' ' || e.key === 'Enter') && onButton) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(idx + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(idx - 1); }
+    else if (e.key === 'g' || e.key === 'G' || e.key === 'ㅎ') { openGrid(); }
+    else if (e.key === 'p' || e.key === 'P' || e.key === 'ㅔ') { e.preventDefault(); window.print(); }
+    else if (e.key === 'Home') { show(0); }
+    else if (e.key === 'End') { show(total - 1); }
+  });
+
+  /* 무대 클릭: 오른쪽 절반 다음 · 왼쪽 절반 이전 (버튼·링크·프롬프트 카드 제외) */
+  stage.addEventListener('click', function(e){
+    if (e.target.closest('button, a, .prompt-card')) return;
+    var rect = stage.getBoundingClientRect();
+    if (e.clientX - rect.left > rect.width / 2) show(idx + 1); else show(idx - 1);
+  });
+  navPrev.addEventListener('click', function(){ show(idx - 1); });
+  navNext.addEventListener('click', function(){ show(idx + 1); });
+  document.getElementById('gridBtn').addEventListener('click', openGrid);
+  document.getElementById('gridClose').addEventListener('click', closeGrid);
+  document.getElementById('printBtn').addEventListener('click', function(){ window.print(); });
+
+  /* 타이머: 벽시계 기준 (탭이 뒤로 가도 시간이 밀리지 않음) */
+  function initTimer(el){
+    var totalSec = parseInt(el.dataset.minutes, 10) * 60;
+    var remaining = totalSec;
+    var endAt = null;
+    var running = false;
+    var tickId = null;
+    var timeEl = el.querySelector('.time');
+    var stateEl = el.querySelector('.state');
+
+    function currentRemaining(){
+      if (!running) return remaining;
+      return Math.round((endAt - Date.now()) / 1000);
+    }
+    function format(sec){
+      var neg = sec < 0, abs = Math.abs(sec);
+      var m = Math.floor(abs / 60), s = abs % 60;
+      return (neg ? '+' : '') + m + ':' + (s < 10 ? '0' + s : s);
+    }
+    function render(){
+      var sec = currentRemaining();
+      timeEl.textContent = format(sec);
+      el.classList.toggle('warn', sec <= 60);
+      if (stateEl) stateEl.textContent = running ? '진행' : '정지';
+    }
+    function start(){
+      if (running) return;
+      running = true;
+      endAt = Date.now() + remaining * 1000;
+      el.classList.add('running');
+      tickId = setInterval(render, 250);
+      render();
+    }
+    function pause(){
+      if (running) remaining = currentRemaining();
+      running = false;
+      el.classList.remove('running');
+      clearInterval(tickId);
+      render();
+    }
+    function reset(){
+      running = false;
+      clearInterval(tickId);
+      remaining = totalSec;
+      el.classList.remove('running');
+      render();
+    }
+    el.addEventListener('click', function(){ if (running) pause(); else start(); });
+    el.addEventListener('dblclick', function(e){ e.stopPropagation(); reset(); });
+    el.addEventListener('keydown', function(e){ if (e.key === 'r' || e.key === 'R' || e.key === 'ㄱ') { e.preventDefault(); reset(); } });
+    render();
+  }
+  stage.querySelectorAll('.timer-chip, .break-big[data-minutes]').forEach(initTimer);
+
+  /* 복사 버튼: clipboard API가 700ms 안에 끝나지 않으면 textarea 폴백 · 완료 표시는 한 번만 */
+  stage.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var target = document.getElementById(btn.dataset.copyTarget);
+      var text = target ? target.textContent : '';
+      var settled = false;
+      function done(){
+        if (settled) return;
+        settled = true;
+        btn.textContent = '복사됨 ✓';
+        btn.classList.add('copied');
+        setTimeout(function(){ btn.textContent = '복사'; btn.classList.remove('copied'); }, 1500);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        setTimeout(function(){ if (!settled) fallbackCopy(text, done); }, 700);
+        navigator.clipboard.writeText(text).then(done).catch(function(){ fallbackCopy(text, done); });
+      } else {
+        fallbackCopy(text, done);
+      }
+    });
+  });
+  function fallbackCopy(text, done){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) { /* 구형 브라우저 · 무시 */ }
+    document.body.removeChild(ta);
+    done();
+  }
+
+  /* 전체보기 축소판: 타이머·복사 핸들러를 붙인 뒤 마지막에 생성 · 복제본은 inert로 포커스 제외 */
+  slides.forEach(function(s, n){
+    var mini = document.createElement('div');
+    mini.className = 'mini';
+    mini.tabIndex = 0;
+    mini.setAttribute('role', 'button');
+    mini.setAttribute('aria-label', (s.getAttribute('aria-label') || String(n + 1)) + ' 슬라이드로 이동');
+    var copy = document.createElement('div');
+    copy.className = s.className.replace(/\bactive\b/, '').trim();
+    copy.setAttribute('aria-hidden', 'true');
+    copy.setAttribute('inert', '');
+    copy.innerHTML = s.innerHTML;
+    copy.querySelectorAll('[id]').forEach(function(el){ el.removeAttribute('id'); });
+    var num = document.createElement('span');
+    num.className = 'mini-num';
+    num.setAttribute('aria-hidden', 'true');
+    num.textContent = n + 1;
+    var inner = document.createElement('div');
+    inner.className = 'mini-inner';
+    inner.appendChild(copy);
+    mini.appendChild(inner);
+    mini.appendChild(num);
+    mini.addEventListener('click', function(){ show(n); closeGrid(); });
+    mini.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(n); closeGrid(); } });
+    gridList.appendChild(mini);
+    minis.push(mini);
+  });
+  show(idx);
+})();
+</script>
+</body>
+</html>

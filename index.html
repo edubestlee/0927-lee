@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>구글 워크스페이스 기초 활용 · 강의 안내</title>
+<meta name="description" content="일반 성인을 위한 구글 워크스페이스 기초 활용 · 2026년 10월 3일 · 강사 이춘아">
+<meta name="theme-color" content="#111111">
+<meta property="og:type" content="website">
+<meta property="og:title" content="구글 워크스페이스 기초 활용">
+<meta property="og:description" content="일반 성인 대상 · 2026년 10월 3일 · 강사 이춘아 · 구글 도구 기초부터 통합 실습까지">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{--bg:#F4F4F3;--paper:#fff;--ink:#111;--sub:#555;--accent:#F6C744;--shadow:0 8px 24px #0002}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.65 'Pretendard Variable',Pretendard,-apple-system,'Malgun Gothic',sans-serif;word-break:keep-all;overflow-wrap:anywhere}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{text-wrap:balance}
+p,li{text-wrap:pretty}
+a{color:inherit}
+button{font:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.skip{position:absolute;left:-9999px;top:1rem;background:var(--ink);color:#fff;padding:.7rem 1rem;z-index:10}
+.skip:focus{left:1rem}
+.wrap{width:min(100% - 2rem,68rem);margin:auto}
+.hero{padding:5rem 0 4.3rem;background:var(--accent);text-align:center}
+.eyebrow{font-size:.8rem;font-weight:800;letter-spacing:.15em}
+.hero h1{margin:.7rem auto 0;font-size:clamp(2.4rem,8vw,4.8rem);line-height:1.18;font-weight:900}
+.hero h1:after{content:"";display:block;width:3.5rem;height:4px;margin:1.3rem auto;background:var(--ink)}
+.lead{font-size:clamp(1rem,2.5vw,1.2rem);font-weight:700}
+.hero-meta{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin:1.4rem 0 0;padding:0;list-style:none}
+.hero-meta li{padding:.4rem .9rem;border:2px solid var(--ink);border-radius:99px;font-size:.92rem;font-weight:800}
+.hero-action{margin-top:1.9rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:.65rem 1.5rem;border-radius:99px;background:var(--ink);color:#fff;text-decoration:none;font-weight:800;text-align:center}
+.btn:hover{background:#333}
+section{padding:3.8rem 0}
+section:nth-child(even){background:#ECECEA}
+.section-head{margin-bottom:1.4rem}
+.section-head .eyebrow{color:var(--sub)}
+h2{margin-top:.25rem;font-size:clamp(1.6rem,4vw,2.2rem);font-weight:900}
+.section-note{margin-top:.45rem;color:var(--sub)}
+.info-grid,.resources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.curriculum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+.panel,.card,.profile,.resource{min-width:0;border-radius:1rem;background:var(--paper);box-shadow:var(--shadow);padding:1.4rem}
+.label,.number{font-size:.82rem;font-weight:800;letter-spacing:.08em;color:var(--sub)}
+.value{margin-top:.35rem;font-size:1.35rem;font-weight:900}
+.detail,.card p,.profile p,.resource p{margin-top:.35rem;color:var(--sub);font-size:.94rem}
+.card h3{margin-top:.4rem;font-size:1.17rem}
+.profile{display:flex;align-items:center;gap:1.2rem}
+.avatar{display:grid;flex:none;place-items:center;width:4.4rem;height:4.4rem;border-radius:50%;background:var(--accent);font-size:1.7rem;font-weight:900}
+.profile h3{font-size:1.3rem}
+.resource h3{font-size:1.13rem}
+.resource a{display:inline-flex;align-items:center;min-height:44px;margin-top:.8rem;font-weight:800;text-underline-offset:.2em}
+.prompt{grid-column:1/-1;background:var(--ink);color:#fff}
+.prompt p{color:#d0d0d0}
+.prompt-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+.prompt pre{margin:1rem 0 0;padding:1rem 0 0;border-top:1px solid #555;white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.96rem}
+.copy{flex:none;min-width:44px;min-height:44px;padding:.55rem 1rem;border:0;border-radius:99px;background:#fff;color:var(--ink);font-weight:800;cursor:pointer}
+.copy:focus-visible{outline-color:#fff}
+.entry{text-align:center;background:var(--accent)}
+.entry p{margin:.6rem auto 1.5rem}
+footer{padding:1.8rem 0;background:var(--ink);color:#fff;text-align:center;font-size:.9rem}
+footer a{display:inline-flex;align-items:center;min-height:44px;margin-right:1rem}
+@media(max-width:720px){.curriculum{grid-template-columns:repeat(2,minmax(0,1fr))}.resources{grid-template-columns:1fr}.prompt{grid-column:auto}}
+@media(max-width:480px){.hero{padding:4rem 0 3.5rem}section{padding:3rem 0}.info-grid,.curriculum{grid-template-columns:1fr}.prompt-head{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문 바로가기</a>
+<header class="hero"><div class="wrap">
+  <div class="eyebrow">GOOGLE WORKSPACE · 기초 과정</div>
+  <h1>구글 워크스페이스 기초 활용</h1>
+  <p class="lead">일상과 업무에 쓰는 구글 도구 · 화면 확인부터 직접 실습까지</p>
+  <ul class="hero-meta"><li>대상 · 일반 성인</li><li>일시 · 2026.10.03.</li><li>강사 · 이춘아</li></ul>
+  <div class="hero-action"><a class="btn" href="slides.html">슬라이드 입장 →</a></div>
+</div></header>
+<main id="main">
+<section id="info" aria-labelledby="info-title"><div class="wrap">
+  <div class="section-head"><div class="eyebrow">대상 · 일정</div><h2 id="info-title">수업 안내</h2></div>
+  <div class="info-grid">
+    <div class="panel"><div class="label">대상</div><div class="value">일반 성인</div><p class="detail">구글 도구의 기본 사용법을 익히려는 학습자</p></div>
+    <div class="panel"><div class="label">일시</div><div class="value">2026년 10월 3일</div><p class="detail">토요일 · 시작 시간과 장소는 별도 안내</p></div>
+  </div>
+</div></section>
+<section id="curriculum" aria-labelledby="curriculum-title"><div class="wrap">
+  <div class="section-head"><div class="eyebrow">커리큘럼</div><h2 id="curriculum-title">기초부터 통합 활용까지</h2><p class="section-note">슬라이드의 18차시 학습 흐름</p></div>
+  <div class="curriculum">
+    <article class="card"><div class="number">01 · 시작</div><h3>워크스페이스와 계정</h3><p>주요 서비스 이해 · 로그인 · 안전한 계정 관리</p></article>
+    <article class="card"><div class="number">02 · 파일</div><h3>드라이브 활용</h3><p>업로드 · 폴더 정리 · 검색 · 공유 권한</p></article>
+    <article class="card"><div class="number">03 · 문서</div><h3>문서 작성과 협업</h3><p>문서 만들기 · 표와 이미지 · 댓글과 공동 편집</p></article>
+    <article class="card"><div class="number">04 · 제작</div><h3>표와 발표 자료</h3><p>스프레드시트 계산 · 정렬과 차트 · 슬라이드 제작</p></article>
+    <article class="card"><div class="number">05 · 소통</div><h3>메일과 일정</h3><p>메일 작성·정리 · 캘린더 일정과 초대</p></article>
+    <article class="card"><div class="number">06 · 연결</div><h3>설문·화상 회의·종합 실습</h3><p>설문지 · 미트 · 여러 도구를 연결한 결과물</p></article>
+  </div>
+</div></section>
+<section id="instructor" aria-labelledby="instructor-title"><div class="wrap">
+  <div class="section-head"><div class="eyebrow">강사 소개</div><h2 id="instructor-title">이춘아</h2></div>
+  <div class="profile"><div class="avatar" aria-hidden="true">이</div><div><h3>강사 이춘아</h3><p>구글 워크스페이스 기초 활용 · 화면 확인과 따라 하기 중심 수업</p></div></div>
+</div></section>
+<section id="materials" aria-labelledby="materials-title"><div class="wrap">
+  <div class="section-head"><div class="eyebrow">자료 · 프롬프트</div><h2 id="materials-title">수업 자료</h2><p class="section-note">필요한 문구를 복사해 실습에 활용</p></div>
+  <div class="resources">
+    <div class="resource"><h3>웹슬라이드</h3><p>차시별 설명과 따라 하기 안내</p><a href="slides.html">슬라이드 보기 →</a></div>
+    <div class="resource"><h3>실습 순서</h3><p>화면 확인 → 직접 실행 → 결과 확인 → 혼자 반복</p><a href="#prompt-one">실습 문구 보기 →</a></div>
+    <div class="resource prompt" id="prompt-one"><div class="prompt-head"><div><h3>기본 실습 프롬프트</h3><p>새 도구를 익힐 때 활용</p></div><button class="copy" type="button" data-copy="prompt-text-one">복사</button></div><pre id="prompt-text-one">나는 구글 워크스페이스를 처음 배우는 성인이야. [배우고 싶은 기능]을 따라 할 수 있게 설명해줘. 화면에서 눌러야 할 곳을 순서대로 알려주고, 각 단계의 확인 방법도 적어줘.</pre></div>
+    <div class="resource prompt"><div class="prompt-head"><div><h3>문서 작성 프롬프트</h3><p>문서 실습에 활용</p></div><button class="copy" type="button" data-copy="prompt-text-two">복사</button></div><pre id="prompt-text-two">구글 문서에서 사용할 [안내문 주제] 안내문 초안을 작성해줘. 제목, 짧은 소개, 준비물, 진행 순서를 구분해줘. 일반 성인이 읽기 쉬운 한국어로 써줘.</pre></div>
+    <div class="resource prompt"><div class="prompt-head"><div><h3>종합 과제 프롬프트</h3><p>여러 도구를 연결할 때 활용</p></div><button class="copy" type="button" data-copy="prompt-text-three">복사</button></div><pre id="prompt-text-three">소규모 모임을 준비하려고 해. 구글 드라이브, 문서, 설문지, 캘린더를 활용한 작업 순서를 제안해줘. 각 도구에서 만들 결과물과 공유 권한 확인 항목을 표로 정리해줘.</pre></div>
+  </div>
+</div></section>
+<section class="entry" id="enter" aria-labelledby="enter-title"><div class="wrap">
+  <div class="eyebrow">수업 시작</div><h2 id="enter-title">슬라이드 입장</h2><p>차시별 설명과 실습 안내 확인</p><a class="btn" href="slides.html">슬라이드 입장 →</a>
+</div></section>
+</main>
+<footer><div class="wrap"><a href="slides.html">슬라이드</a><a href="#materials">자료 · 프롬프트</a><p>구글 워크스페이스 기초 활용 · 강사 이춘아</p></div></footer>
+<script>
+document.querySelectorAll('[data-copy]').forEach(function(button){
+  button.addEventListener('click',async function(){
+    var source=document.getElementById(button.dataset.copy);
+    var original=button.textContent;
+    try{
+      if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(source.textContent)}
+      else{var field=document.createElement('textarea');field.value=source.textContent;field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();if(!document.execCommand('copy'))throw new Error('copy');field.remove()}
+      button.textContent='복사됨 ✓';
+    }catch(error){button.textContent='복사 실패'}
+    setTimeout(function(){button.textContent=original},1800)
+  })
+})
+</script>
+</body>
+</html>
